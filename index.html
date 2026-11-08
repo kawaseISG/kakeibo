@@ -178,7 +178,7 @@ details summary{color:var(--muted);cursor:pointer}
   <div class="capture">
     <button class="shoot" id="shootBtn" type="button">
       <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.6"/></svg>
-      <span><strong>レシートを読み取る</strong><span>iPhoneのカメラで文字を読み取り、金額・店名・分類を自動で振り分けます</span></span>
+      <span><strong>コピーした文字で登録</strong><span>カメラアプリでコピーしたレシートの文字から、金額・店名・分類を自動で振り分けます</span></span>
     </button>
     <button class="ghost" id="manualBtn" type="button">手入力</button>
     <div class="tip" id="homeTip" hidden>
@@ -211,27 +211,18 @@ details summary{color:var(--muted);cursor:pointer}
       <button class="x" id="closeBtn" aria-label="閉じる">×</button>
     </header>
     <div class="scanbox" id="scanBox" hidden>
-      <ol class="howto">
-        <li>下の枠をタップし、出てきたメニューの「<b>テキストをスキャン</b>」を押す</li>
-        <li>レシートにカメラを向け、文字が黄色の枠で囲まれたら「<b>挿入</b>」を押す</li>
+      <ol class="howto" id="howto">
+        <li>「カメラ」アプリでレシートを映し、右下の<b>文字のマーク</b>を押す</li>
+        <li>「<b>すべてを選択</b>」→「<b>コピー</b>」</li>
+        <li>この画面に戻り、下の枠をタップして「<b>ペースト</b>」</li>
       </ol>
-      <div class="camrow">
-        <button type="button" class="ghost" id="camBtn">カメラで撮影</button>
-        <button type="button" class="ghost" id="libBtn">写真から選ぶ</button>
-      </div>
-      <input class="hidden-input" id="camInput" type="file" accept="image/*" capture="environment" tabindex="-1" aria-hidden="true">
-      <input class="hidden-input" id="libInput" type="file" accept="image/*" tabindex="-1" aria-hidden="true">
-      <div class="photobox" id="photoBox" hidden>
-        <p class="phint">写真の文字を<b>長押し</b> →「<b>すべてを選択</b>」→「<b>コピー</b>」→ 下の枠をタップして「<b>ペースト</b>」</p>
-        <img id="photo" alt="撮影したレシート">
-      </div>
-      <textarea id="fText" rows="4" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="ここをタップ →「テキストをスキャン」"></textarea>
+      <textarea id="fText" rows="4" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="ここをタップして「ペースト」"></textarea>
       <div class="status" id="statusBox"><div id="status"></div></div>
-      <details class="trouble"><summary>メニューが出ないとき・写真から読み取るとき</summary>
+      <details class="trouble"><summary>うまくいかないとき</summary>
         <ul>
-          <li>枠をもう一度タップするか、長押しすると「テキストをスキャン」が出ます。キーボード上部のスキャンのアイコンからも使えます。</li>
-          <li>長いレシートは上下2回に分けてスキャンしても大丈夫です。続けて挿入されます。</li>
-          <li>撮影済みの写真なら、「写真」アプリで文字を長押し →「すべてを選択」→「コピー」し、この枠に貼り付けてください。</li>
+          <li>文字のマークが出ないときは、レシートを平らにして明るい場所で、少し離して映してください。</li>
+          <li>長いレシートは、合計の行が入るように映すのが一番大事です。上下2回に分けてコピー＆ペーストしても大丈夫です。</li>
+          <li>撮影済みの写真からは、「写真」アプリで写真を開き、文字を長押し →「すべてを選択」→「コピー」でも同じようにできます。</li>
         </ul>
       </details>
     </div>
@@ -631,8 +622,7 @@ function openSheet({entry,scan}={}){
   $('saveBtn').textContent=entry?'保存する':'登録する';
   const cl=$('cardList');cl.textContent='';
   for(const c of [...new Set(state.entries.map(e=>(e.card||'').trim()).filter(Boolean))])cl.append(h('option',{value:c}));
-  $('scanBox').hidden=!scan;$('fText').value='';setStatus('');
-  {const img=$('photo');if(img.src.startsWith('blob:'))URL.revokeObjectURL(img.src);img.removeAttribute('src');$('photoBox').hidden=true}
+  $('scanBox').hidden=!scan;$('fText').value='';setStatus('');$('howto').hidden=false;
   fillForm(entry||{date:todayISO()});
   $('scrim').hidden=false;document.body.style.overflow='hidden';
   $('scrim').querySelector('.sheet').scrollTop=0;
@@ -670,15 +660,13 @@ function readText(){
 $('fText').addEventListener('input',()=>{clearTimeout(parseTimer);parseTimer=setTimeout(readText,400)});
 $('fText').addEventListener('paste',()=>{clearTimeout(parseTimer);parseTimer=setTimeout(readText,100)});
 
-$('shootBtn').onclick=()=>openSheet({scan:true});
-$('camBtn').onclick=()=>$('camInput').click();
-$('libBtn').onclick=()=>$('libInput').click();
-for(const id of ['camInput','libInput'])$(id).addEventListener('change',e=>{
-  const f=e.target.files&&e.target.files[0];e.target.value='';if(!f)return;
-  const img=$('photo');if(img.src.startsWith('blob:'))URL.revokeObjectURL(img.src);
-  img.src=URL.createObjectURL(f);$('photoBox').hidden=false;
-  setTimeout(()=>$('photoBox').scrollIntoView({block:'start',behavior:'smooth'}),100);
-});
+$('shootBtn').onclick=async()=>{
+  // iOS shows a small "ペースト" bubble; tapping it hands over the copied text
+  let t='';
+  try{if(navigator.clipboard&&navigator.clipboard.readText)t=await navigator.clipboard.readText()}catch{}
+  openSheet({scan:true});
+  if(t&&t.trim()){$('fText').value=t;readText();$('howto').hidden=true}
+};
 $('manualBtn').onclick=()=>openSheet();
 
 $('saveBtn').onclick=()=>{
