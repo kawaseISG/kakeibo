@@ -125,6 +125,11 @@ section h2{margin:0 0 10px;font-size:.78rem;font-weight:700;color:var(--muted);l
 .scanbox{display:flex;flex-direction:column;gap:8px;background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:12px}
 .howto{margin:0;padding-left:1.3em;font-size:.85rem;display:flex;flex-direction:column;gap:2px}
 .scanbox textarea{width:100%;min-height:96px;padding:10px 12px;border-radius:10px;border:1.5px dashed var(--accent);background:var(--surface);font-size:16px;line-height:1.5;resize:vertical}
+.camrow{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.camrow .ghost{padding:10px;font-size:.9rem}
+.photobox{display:flex;flex-direction:column;gap:6px}
+.phint{margin:0;font-size:.82rem}
+.photobox img{width:100%;max-height:60vh;object-fit:contain;border-radius:10px;border:1px solid var(--line);background:var(--surface);-webkit-user-select:auto;user-select:auto}
 .trouble{border-top:none;padding-top:0;font-size:.8rem}
 .trouble ul{margin:6px 0 0;padding-left:1.2em;color:var(--muted);display:flex;flex-direction:column;gap:4px}
 .field input,.field select{width:100%;padding:11px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);font-size:16px}
@@ -210,6 +215,16 @@ details summary{color:var(--muted);cursor:pointer}
         <li>下の枠をタップし、出てきたメニューの「<b>テキストをスキャン</b>」を押す</li>
         <li>レシートにカメラを向け、文字が黄色の枠で囲まれたら「<b>挿入</b>」を押す</li>
       </ol>
+      <div class="camrow">
+        <button type="button" class="ghost" id="camBtn">カメラで撮影</button>
+        <button type="button" class="ghost" id="libBtn">写真から選ぶ</button>
+      </div>
+      <input class="hidden-input" id="camInput" type="file" accept="image/*" capture="environment" tabindex="-1" aria-hidden="true">
+      <input class="hidden-input" id="libInput" type="file" accept="image/*" tabindex="-1" aria-hidden="true">
+      <div class="photobox" id="photoBox" hidden>
+        <p class="phint">写真の文字を<b>長押し</b> →「<b>すべてを選択</b>」→「<b>コピー</b>」→ 下の枠をタップして「<b>ペースト</b>」</p>
+        <img id="photo" alt="撮影したレシート">
+      </div>
       <textarea id="fText" rows="4" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="ここをタップ →「テキストをスキャン」"></textarea>
       <div class="status" id="statusBox"><div id="status"></div></div>
       <details class="trouble"><summary>メニューが出ないとき・写真から読み取るとき</summary>
@@ -617,6 +632,7 @@ function openSheet({entry,scan}={}){
   const cl=$('cardList');cl.textContent='';
   for(const c of [...new Set(state.entries.map(e=>(e.card||'').trim()).filter(Boolean))])cl.append(h('option',{value:c}));
   $('scanBox').hidden=!scan;$('fText').value='';setStatus('');
+  {const img=$('photo');if(img.src.startsWith('blob:'))URL.revokeObjectURL(img.src);img.removeAttribute('src');$('photoBox').hidden=true}
   fillForm(entry||{date:todayISO()});
   $('scrim').hidden=false;document.body.style.overflow='hidden';
   $('scrim').querySelector('.sheet').scrollTop=0;
@@ -655,6 +671,14 @@ $('fText').addEventListener('input',()=>{clearTimeout(parseTimer);parseTimer=set
 $('fText').addEventListener('paste',()=>{clearTimeout(parseTimer);parseTimer=setTimeout(readText,100)});
 
 $('shootBtn').onclick=()=>openSheet({scan:true});
+$('camBtn').onclick=()=>$('camInput').click();
+$('libBtn').onclick=()=>$('libInput').click();
+for(const id of ['camInput','libInput'])$(id).addEventListener('change',e=>{
+  const f=e.target.files&&e.target.files[0];e.target.value='';if(!f)return;
+  const img=$('photo');if(img.src.startsWith('blob:'))URL.revokeObjectURL(img.src);
+  img.src=URL.createObjectURL(f);$('photoBox').hidden=false;
+  setTimeout(()=>$('photoBox').scrollIntoView({block:'start',behavior:'smooth'}),100);
+});
 $('manualBtn').onclick=()=>openSheet();
 
 $('saveBtn').onclick=()=>{
