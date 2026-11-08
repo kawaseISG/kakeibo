@@ -44,6 +44,8 @@ button{cursor:pointer}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .num{font-family:var(--font-num);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 
+.apphead{display:flex;align-items:center;gap:8px;padding-top:6px;color:var(--accent)}
+.apphead h1{margin:0;font-size:1.2rem;font-weight:700;letter-spacing:.06em;color:var(--ink)}
 .viewseg{width:100%;max-width:240px;margin:0 auto -10px}
 .viewseg button{padding:7px 6px}
 .yrow{display:grid;grid-template-columns:3.6em 1fr 6.2em;gap:10px;align-items:center;width:100%;padding:11px 14px;border:none;border-bottom:1px solid var(--rule);background:none;text-align:left;font-size:.92rem}
@@ -53,8 +55,8 @@ button{cursor:pointer}
 .yrow .fill{height:100%;border-radius:4px;background:var(--accent)}
 .yrow.none{color:var(--muted)}
 .month{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;gap:8px;padding-top:6px}
-.month h1{margin:0;text-align:center;font-size:1.05rem;font-weight:700;line-height:1.3}
-.month h1 small{display:block;font-size:.75rem;font-weight:400;color:var(--muted);letter-spacing:.04em}
+.month h2{margin:0;text-align:center;font-size:1.05rem;font-weight:700;line-height:1.3}
+.month h2 small{display:block;font-size:.75rem;font-weight:400;color:var(--muted);letter-spacing:.04em}
 .navbtn{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--surface);font-size:1.1rem;display:grid;place-items:center}
 .navbtn:disabled{opacity:.35;cursor:default}
 
@@ -185,13 +187,17 @@ details summary{color:var(--muted);cursor:pointer}
 </head>
 <body>
 <div class="wrap">
+  <header class="apphead">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4L6 21z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>
+    <h1>レシート家計簿</h1>
+  </header>
   <div class="seg viewseg" id="viewSeg">
     <button type="button" data-v="month" aria-pressed="true">月</button>
     <button type="button" data-v="year" aria-pressed="false">年間</button>
   </div>
   <div class="month">
     <button class="navbtn" id="prev" aria-label="前の期間">‹</button>
-    <h1 id="monthTitle">—</h1>
+    <h2 id="monthTitle">—</h2>
     <button class="navbtn" id="next" aria-label="次の期間">›</button>
   </div>
 
@@ -346,7 +352,7 @@ details summary{color:var(--muted);cursor:pointer}
 
 <script>
 /* ===== version: raise this every time a new index.html is uploaded ===== */
-const APP_VERSION='1.5',APP_DATE='2026/11/08';
+const APP_VERSION='1.6',APP_DATE='2026/11/08';
 
 /* ===== master data ===== */
 const CATS=[
