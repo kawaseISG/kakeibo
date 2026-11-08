@@ -19,6 +19,7 @@
   --accent:#1e6a4f; --accent-soft:#dcebe3; --on-accent:#ffffff;
   --util:#2c5d8c; --util-soft:#dde7f1; --fixed:#86612a; --fixed-soft:#f1e7d7; --warn:#b3261e; --warn-soft:#f8e1de;
   --scrim:rgba(20,32,29,.42);
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4; --s6:#008300; --s7:#6250d6; --s-other:#a7b2ae;
   --font-body:"Zen Kaku Gothic New","Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
   --font-num:"DM Mono",ui-monospace,"SF Mono",Menlo,monospace;
   color-scheme:light;
@@ -28,6 +29,7 @@
   --accent:#5fc49c; --accent-soft:#1d3a2f; --on-accent:#0b1a14;
   --util:#86b6e2; --util-soft:#1c2d3d; --fixed:#d8b278; --fixed-soft:#3a2f1e; --warn:#f2958c; --warn-soft:#3d1f1c;
   --scrim:rgba(0,0,0,.6); color-scheme:dark;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300; --s7:#9085e9; --s-other:#55625e;
 }}
 *{box-sizing:border-box}
 html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);background:var(--bg)}
@@ -56,6 +58,23 @@ button{cursor:pointer}
 .chip{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;padding:3px 10px;border-radius:999px;background:var(--accent-soft);white-space:nowrap}
 .chip.util{background:var(--util-soft)} .chip.fixed{background:var(--fixed-soft)}
 
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.chart text{font-family:var(--font-num);font-size:10px;fill:var(--muted)}
+.chart .grid{stroke:var(--rule);stroke-width:1}
+.chart .base{stroke:var(--line);stroke-width:1}
+.chart .ref{stroke:var(--muted);stroke-width:1.2;stroke-dasharray:4 3}
+.chart .hit{fill:transparent;cursor:pointer}
+.chart .sel{fill:var(--accent-soft)}
+.readout{font-size:.85rem;min-height:1.6em;margin-bottom:4px;display:flex;flex-wrap:wrap;gap:4px 12px}
+.readout b{font-weight:700}
+.legend-row{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.8rem;margin-bottom:6px;color:var(--muted)}
+.sw{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.donutwrap{display:grid;grid-template-columns:150px 1fr;gap:16px;align-items:center}
+.donutwrap > *{min-width:0}
+.legend{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;font-size:.86rem}
+.legend li{display:grid;grid-template-columns:auto 1fr auto;gap:6px;align-items:center}
+.legend .pct{font-family:var(--font-num);color:var(--muted);font-size:.8rem}
+@media (max-width:360px){.donutwrap{grid-template-columns:1fr}.donutwrap svg{max-width:170px;margin:0 auto}}
 .budget{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
 .bhead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:.85rem;color:var(--muted)}
 .bhead strong{font-size:1.35rem;color:var(--accent);font-weight:500}
@@ -190,6 +209,24 @@ details summary{color:var(--muted);cursor:pointer}
   <section id="catSec" hidden>
     <h2>カテゴリ別</h2>
     <div class="bars" id="bars"></div>
+  </section>
+
+  <section id="shareSec" hidden>
+    <h2>カテゴリの割合</h2>
+    <div class="donutwrap chart"><svg id="donut" viewBox="0 0 150 150" role="img" aria-label="カテゴリの割合"></svg><ul class="legend" id="donutLegend"></ul></div>
+  </section>
+
+  <section id="trendSec" hidden>
+    <h2>月ごとの推移</h2>
+    <div class="readout" id="trendRead"></div>
+    <div class="chart" id="trendChart"></div>
+  </section>
+
+  <section id="utilSec" hidden>
+    <h2>光熱費の推移</h2>
+    <div class="legend-row"><span><i class="sw" style="background:var(--s4)"></i>電気</span><span><i class="sw" style="background:var(--s1)"></i>水道</span><span><i class="sw" style="background:var(--s2)"></i>ガス</span></div>
+    <div class="readout" id="utilRead"></div>
+    <div class="chart" id="utilChart"></div>
   </section>
 
   <section id="paySec" hidden>
@@ -400,7 +437,7 @@ function periodRange(key){
   const s=new Date(y,m-1,sd),e=new Date(y,m,sd);
   return {start:isoOf(s),end:isoOf(e),last:new Date(y,m,sd-1)};
 }
-function shiftMonth(delta){const [y,m]=state.month.split('-').map(Number);const d=new Date(y,m-1+delta,1);state.month=`${d.getFullYear()}-${pad(d.getMonth()+1)}`;render()}
+function shiftMonth(delta){trendSel=utilSel=null;const [y,m]=state.month.split('-').map(Number);const d=new Date(y,m-1+delta,1);state.month=`${d.getFullYear()}-${pad(d.getMonth()+1)}`;render()}
 $('prev').onclick=()=>shiftMonth(-1);
 $('next').onclick=()=>shiftMonth(1);
 
@@ -451,6 +488,8 @@ function render(){
     bars.append(h('div',{class:'bar '+(CAT_G[c]||'var')},h('span',{text:c}),h('div',{class:'track'},fill),h('span',{class:'num',text:'¥'+yen(v)})));
   }
 
+  renderCharts(cats,total);
+
   const pays=$('pays');pays.textContent='';$('paySec').hidden=!list.length;
   for(const [id,label] of PAYS){
     const sub=list.filter(e=>e.payment===id);if(!sub.length)continue;
@@ -480,6 +519,77 @@ function render(){
       h('div',null,h('div',{class:'store',text:e.store||'（店名なし）'}),
         h('div',{class:'meta'},h('span',{class:'tag '+(CAT_G[e.category]||'var'),text:e.category||'その他'}),h('span',{class:'tag pay',text:payText}))),
       h('span',{class:'num',text:'¥'+yen(e.amount)})));
+  }
+}
+
+/* ===== charts ===== */
+const sumRange=(r,pred)=>state.entries.reduce((s,e)=>(e.date||'')>=r.start&&(e.date||'')<r.end&&(!pred||pred(e))?s+(+e.amount||0):s,0);
+function lastKeys(n){const [y,m]=state.month.split('-').map(Number);const out=[];for(let i=n-1;i>=0;i--){const d=new Date(y,m-1-i,1);out.push(`${d.getFullYear()}-${pad(d.getMonth()+1)}`)}return out}
+const mlabel=k=>+k.split('-')[1]+'月';
+const man=v=>v>=10000?(Math.round(v/1000)/10)+'万':yen(v);
+function niceMax(v){if(v<=0)return 1000;const p=Math.pow(10,Math.floor(Math.log10(v)));for(const f of [1,2,3,4,5,6,8,10])if(f*p>=v)return f*p;return 10*p}
+function barPath(x,y,w,hgt,rTop){const r=Math.min(rTop,w/2,hgt);if(hgt<=0)return '';return `M${x},${y+hgt}V${y+r}Q${x},${y} ${x+r},${y}H${x+w-r}Q${x+w},${y} ${x+w},${y+r}V${y+hgt}Z`}
+const W=340,H=170,PL=34,PR=6,PT=10,PB=22;
+function axes(max,keys,bw,step){
+  let g='';for(const f of [.5,1]){const y=PT+(H-PT-PB)*(1-f);g+=`<line class="grid" x1="${PL}" x2="${W-PR}" y1="${y}" y2="${y}"/><text x="${PL-5}" y="${y+3}" text-anchor="end">${man(max*f)}</text>`}
+  g+=`<line class="base" x1="${PL}" x2="${W-PR}" y1="${H-PB}" y2="${H-PB}"/>`;
+  keys.forEach((k,i)=>{g+=`<text x="${PL+step*i+step/2}" y="${H-6}" text-anchor="middle">${mlabel(k)}</text>`});
+  return g;
+}
+let trendSel=null,utilSel=null;
+function renderCharts(cats,total){
+  // share donut
+  $('shareSec').hidden=!(total>0);
+  if(total>0){
+    // each category keeps the same color everywhere; the rest fold into one gray slice
+    const CC={'食費':'s3','電気代':'s4','ガス代':'s2','水道代':'s1','外食':'s5','通信費':'s6','日用品':'s7'};
+    const segs=cats.filter(([c])=>CC[c]).map(([c,v])=>({c,v,col:`var(--${CC[c]})`}));
+    const rest=cats.filter(([c])=>!CC[c]).reduce((s,[,v])=>s+v,0);if(rest>0)segs.push({c:'その他の項目',v:rest,col:'var(--s-other)'});
+    const R=58,C=2*Math.PI*R;let off=0,svg='';
+    for(const sg of segs){const len=sg.v/total*C,gap=segs.length>1?2:0;svg+=`<circle cx="75" cy="75" r="${R}" fill="none" stroke="${sg.col}" stroke-width="22" stroke-dasharray="${Math.max(0,len-gap)} ${C}" stroke-dashoffset="${-off}" transform="rotate(-90 75 75)"/>`;off+=len}
+    svg+=`<text x="75" y="72" text-anchor="middle" style="font-size:10px">合計</text><text x="75" y="88" text-anchor="middle" style="font-size:14px;fill:var(--ink)">¥${man(total)}</text>`;
+    $('donut').innerHTML=svg;
+    const lg=$('donutLegend');lg.textContent='';
+    for(const sg of segs){const sw=h('i',{class:'sw'});sw.style.background=sg.col;lg.append(h('li',null,sw,h('span',{text:sg.c}),h('span',{class:'pct',text:`${Math.round(sg.v/total*100)}%`})))}
+  }
+  // monthly trend
+  const keys=lastKeys(6),ranges=keys.map(periodRange);
+  const totals=ranges.map(r=>sumRange(r));
+  $('trendSec').hidden=!totals.some(v=>v>0);
+  if(totals.some(v=>v>0)){
+    const max=niceMax(Math.max(...totals,state.budget||0));const step=(W-PL-PR)/keys.length,bw=Math.min(28,step*.5);
+    if(trendSel==null||trendSel>=keys.length)trendSel=keys.length-1;
+    let g=axes(max,keys,bw,step);
+    totals.forEach((v,i)=>{const hh=(H-PT-PB)*v/max,x=PL+step*i+(step-bw)/2;
+      if(i===trendSel)g+=`<rect class="sel" x="${PL+step*i+2}" y="${PT}" width="${step-4}" height="${H-PT-PB}" rx="6"/>`;
+      g+=`<path d="${barPath(x,H-PB-hh,bw,hh,4)}" fill="${i===keys.length-1?'var(--accent)':'var(--s-other)'}"/>`});
+    if(state.budget>0){const y=PT+(H-PT-PB)*(1-state.budget/max);g+=`<line class="ref" x1="${PL}" x2="${W-PR}" y1="${y}" y2="${y}"/><text x="${W-PR}" y="${y-4}" text-anchor="end">生活費</text>`}
+    keys.forEach((k,i)=>{g+=`<rect class="hit" data-i="${i}" x="${PL+step*i}" y="${PT}" width="${step}" height="${H-PT}"/>`});
+    const el=$('trendChart');el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="過去6か月の支出の推移">${g}</svg>`;
+    el.querySelectorAll('.hit').forEach(r=>r.addEventListener('click',()=>{trendSel=+r.dataset.i;render()}));
+    const i=trendSel,prev=i>0?totals[i-1]:null,diff=prev!=null&&prev>0?totals[i]-prev:null;
+    const rd=$('trendRead');rd.textContent='';
+    rd.append(h('span',null,`${mlabel(keys[i])}${state.startDay===1?'':'分'} `,h('b',{class:'num',text:'¥'+yen(totals[i])})));
+    if(diff!=null)rd.append(h('span',{class:'num',style:'color:var(--muted)',text:`前の月より ${diff>=0?'+':'−'}¥${yen(Math.abs(diff))}`}));
+  }
+  // utilities stacked
+  const U=[['電気代','var(--s4)'],['水道代','var(--s1)'],['ガス代','var(--s2)']];
+  const ut=ranges.map(r=>U.map(([c])=>sumRange(r,e=>e.category===c)));
+  const anyU=ut.some(a=>a.some(v=>v>0));$('utilSec').hidden=!anyU;
+  if(anyU){
+    const max=niceMax(Math.max(...ut.map(a=>a[0]+a[1]+a[2])));const step=(W-PL-PR)/keys.length,bw=Math.min(28,step*.5);
+    if(utilSel==null||utilSel>=keys.length)utilSel=keys.length-1;
+    let g=axes(max,keys,bw,step);
+    ut.forEach((a,i)=>{const x=PL+step*i+(step-bw)/2;let y=H-PB;const nz=a.map((v,j)=>v>0?j:-1).filter(j=>j>=0),topJ=nz[nz.length-1];
+      if(i===utilSel)g+=`<rect class="sel" x="${PL+step*i+2}" y="${PT}" width="${step-4}" height="${H-PT-PB}" rx="6"/>`;
+      a.forEach((v,j)=>{if(v<=0)return;const hh=(H-PT-PB)*v/max;const segH=Math.max(1,hh-(j===topJ?0:2));y-=hh;
+        g+=j===topJ?`<path d="${barPath(x,y,bw,hh,4)}" fill="${U[j][1]}"/>`:`<rect x="${x}" y="${y+(hh-segH)}" width="${bw}" height="${segH}" fill="${U[j][1]}"/>`;})});
+    keys.forEach((k,i)=>{g+=`<rect class="hit" data-i="${i}" x="${PL+step*i}" y="${PT}" width="${step}" height="${H-PT}"/>`});
+    const el=$('utilChart');el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="過去6か月の光熱費の推移">${g}</svg>`;
+    el.querySelectorAll('.hit').forEach(r=>r.addEventListener('click',()=>{utilSel=+r.dataset.i;render()}));
+    const a=ut[utilSel],rd=$('utilRead');rd.textContent='';
+    rd.append(h('span',null,`${mlabel(keys[utilSel])}${state.startDay===1?'':'分'} `,h('b',{class:'num',text:'¥'+yen(a[0]+a[1]+a[2])})));
+    U.forEach(([c],j)=>rd.append(h('span',{class:'num',style:'color:var(--muted)',text:`${c.replace('代','')} ¥${yen(a[j])}`})));
   }
 }
 
