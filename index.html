@@ -178,6 +178,8 @@ details summary{color:var(--muted);cursor:pointer}
 .del{padding:14px 16px;border-radius:14px;border:1px solid var(--line);background:none;color:var(--warn)}
 .del.armed{background:var(--warn-soft);border-color:var(--warn)}
 .hint{font-size:.75rem;color:var(--muted)}
+.ver{text-align:center;font-size:.75rem;color:var(--muted);font-family:var(--font-num);padding-top:4px}
+.ver-set{font-family:var(--font-num);border-top:1px solid var(--rule);padding-top:10px}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:999px;font-size:.88rem;z-index:30;max-width:calc(100% - 32px);text-align:center}
 </style>
 </head>
@@ -250,6 +252,7 @@ details summary{color:var(--muted);cursor:pointer}
     <h2 id="ledgerTitle">明細</h2>
     <div class="ledger" id="ledger"></div>
   </section>
+  <footer class="ver" id="verFooter"></footer>
 </div>
 
 <!-- entry sheet -->
@@ -336,11 +339,15 @@ details summary{color:var(--muted);cursor:pointer}
     </div>
     <input class="hidden-input" id="importInput" type="file" accept=".csv,text/csv" tabindex="-1" aria-hidden="true">
     <div class="hint" id="countHint"></div>
+    <div class="hint ver-set" id="verSet"></div>
   </div>
 </div>
 <div class="toast" id="toast" hidden></div>
 
 <script>
+/* ===== version: raise this every time a new index.html is uploaded ===== */
+const APP_VERSION='1.5',APP_DATE='2026/11/08';
+
 /* ===== master data ===== */
 const CATS=[
   {n:'食費',g:'var'},{n:'外食',g:'var'},{n:'日用品',g:'var'},{n:'交通費',g:'var'},
@@ -920,6 +927,8 @@ function toast(msg){const t=$('toast');t.textContent=msg;t.hidden=false;clearTim
   $('homeTipX').onclick=()=>{$('homeTip').hidden=true;try{localStorage.setItem(KEY+'.tip','1')}catch{}};
 })();
 
+$('verFooter').textContent=`レシート家計簿 v${APP_VERSION}（${APP_DATE} 更新）`;
+$('verSet').textContent=`バージョン ${APP_VERSION}（${APP_DATE} 更新）`;
 load();render();
 </script>
 </body>
