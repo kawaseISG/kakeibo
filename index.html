@@ -12,7 +12,6 @@
 <meta name="theme-color" content="#0f1514" media="(prefers-color-scheme: dark)">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
 <style>
 /* Layout: one narrow ledger column — period total, budget, capture actions, breakdowns, ruled entry list; full-screen sheets for checking a scan and for settings */
 :root{
@@ -123,6 +122,11 @@ section h2{margin:0 0 10px;font-size:.78rem;font-weight:700;color:var(--muted);l
 @media (prefers-reduced-motion: reduce){.prog div{transition:none}}
 .field{display:flex;flex-direction:column;gap:4px}
 .field label,.field .lbl{font-size:.75rem;color:var(--muted);letter-spacing:.05em}
+.scanbox{display:flex;flex-direction:column;gap:8px;background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:12px}
+.howto{margin:0;padding-left:1.3em;font-size:.85rem;display:flex;flex-direction:column;gap:2px}
+.scanbox textarea{width:100%;min-height:96px;padding:10px 12px;border-radius:10px;border:1.5px dashed var(--accent);background:var(--surface);font-size:16px;line-height:1.5;resize:vertical}
+.trouble{border-top:none;padding-top:0;font-size:.8rem}
+.trouble ul{margin:6px 0 0;padding-left:1.2em;color:var(--muted);display:flex;flex-direction:column;gap:4px}
 .field input,.field select{width:100%;padding:11px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);font-size:16px}
 .amount input{font-family:var(--font-num);font-size:1.5rem;font-weight:500}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -169,14 +173,9 @@ details summary{color:var(--muted);cursor:pointer}
   <div class="capture">
     <button class="shoot" id="shootBtn" type="button">
       <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.6"/></svg>
-      <span><strong>レシートを撮影</strong><span>金額・日付・店名・分類・支払方法を読み取ります</span></span>
+      <span><strong>レシートを読み取る</strong><span>iPhoneのカメラで文字を読み取り、金額・店名・分類を自動で振り分けます</span></span>
     </button>
-    <div class="subrow">
-      <button class="ghost" id="pickBtn" type="button">写真から選ぶ</button>
-      <button class="ghost" id="manualBtn" type="button">手入力</button>
-    </div>
-    <input class="hidden-input" id="camInput" type="file" accept="image/*" capture="environment" tabindex="-1" aria-hidden="true">
-    <input class="hidden-input" id="libInput" type="file" accept="image/*" tabindex="-1" aria-hidden="true">
+    <button class="ghost" id="manualBtn" type="button">手入力</button>
     <div class="tip" id="homeTip" hidden>
       <p>Safariの共有ボタン →「ホーム画面に追加」で、アプリのように使えます。記録も消えにくくなります。</p>
       <button type="button" id="homeTipX" aria-label="閉じる">×</button>
@@ -206,9 +205,20 @@ details summary{color:var(--muted);cursor:pointer}
       <h3 id="sheetTitle">内容を確認</h3>
       <button class="x" id="closeBtn" aria-label="閉じる">×</button>
     </header>
-    <div class="thumbwrap" id="thumbwrap" hidden>
-      <img class="thumb" id="thumb" alt="撮影したレシート">
-      <div class="status" id="statusBox"><div id="status"></div><div class="prog" id="prog" hidden><div id="progFill"></div></div></div>
+    <div class="scanbox" id="scanBox" hidden>
+      <ol class="howto">
+        <li>下の枠をタップし、出てきたメニューの「<b>テキストをスキャン</b>」を押す</li>
+        <li>レシートにカメラを向け、文字が黄色の枠で囲まれたら「<b>挿入</b>」を押す</li>
+      </ol>
+      <textarea id="fText" rows="4" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="ここをタップ →「テキストをスキャン」"></textarea>
+      <div class="status" id="statusBox"><div id="status"></div></div>
+      <details class="trouble"><summary>メニューが出ないとき・写真から読み取るとき</summary>
+        <ul>
+          <li>枠をもう一度タップするか、長押しすると「テキストをスキャン」が出ます。キーボード上部のスキャンのアイコンからも使えます。</li>
+          <li>長いレシートは上下2回に分けてスキャンしても大丈夫です。続けて挿入されます。</li>
+          <li>撮影済みの写真なら、「写真」アプリで文字を長押し →「すべてを選択」→「コピー」し、この枠に貼り付けてください。</li>
+        </ul>
+      </details>
     </div>
     <div class="field amount">
       <label for="fAmount">金額（税込）</label>
@@ -230,7 +240,6 @@ details summary{color:var(--muted);cursor:pointer}
     </div>
     <div class="field"><label for="fMemo">メモ</label><input id="fMemo" type="text" autocomplete="off"></div>
     <details id="itemsBox" hidden><summary id="itemsSum">読み取った品目</summary><ul class="items" id="items"></ul></details>
-    <details id="rawBox" hidden><summary>読み取った文字（確認用）</summary><pre id="raw" style="white-space:pre-wrap;font-size:.75rem;margin:8px 0 0;color:var(--muted)"></pre></details>
     <div class="hint" id="learnHint" hidden></div>
     <div class="actions">
       <button class="del" id="delBtn" type="button" hidden>削除</button>
@@ -449,7 +458,7 @@ function render(){
 
   const led=$('ledger');led.textContent='';
   if(!list.length){
-    led.append(h('div',{class:'empty'},h('strong',{text:'この期間の記録はまだありません'}),h('span',{text:'「レシートを撮影」を押すと、読み取った内容を確認してから登録できます。電気・ガス・水道の請求書や検針票も撮影できます。'})));
+    led.append(h('div',{class:'empty'},h('strong',{text:'この期間の記録はまだありません'}),h('span',{text:'「レシートを読み取る」を押すと、読み取った内容を確認してから登録できます。電気・ガス・水道の請求書や検針票も読み取れます。'})));
     return;
   }
   const sorted=[...list].sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(b.createdAt||0)-(a.createdAt||0));
@@ -478,21 +487,36 @@ function normalize(t){
 const NUM_RE=/¥?\s*(\d{1,3}(?:[,.]\d{3})+|\d{1,7})(?!\d)/g;
 function numsIn(line){const out=[];for(const m of line.matchAll(NUM_RE)){const v=parseInt(m[1].replace(/[,.]/g,''),10);if(v>0)out.push(v)}return out}
 const SKIP_TOTAL=/小計|預り|預かり|お預|釣|つり銭|消費税|税率|対象|内税|外税|ポイント|残高|点数|割引前/;
+const isNumLine=L=>/^[¥\\]?\s*-?\s*\d{1,3}(?:,\d{3})+\s*[円※*軽外内税]*$|^[¥\\]?\s*-?\s*\d{1,7}\s*[円※*軽外内税]*$/.test(L);
+/* Live Text may read the label column and the amount column separately:
+   find the amount sitting at the same position in the following block of amount-only lines */
+function alignedValue(lines,i){
+  let j=i;while(j>0&&!isNumLine(lines[j-1]))j--;
+  let k=i;while(k<lines.length&&!isNumLine(lines[k]))k++;
+  const nums=[];for(let n=k;n<lines.length&&isNumLine(lines[n]);n++)nums.push(numsIn(lines[n])[0]||0);
+  if(!nums.length)return 0;
+  const labels=k-j;
+  const idx=labels>=nums.length?nums.length-1-(k-1-i):i-j;
+  return idx>=0&&idx<nums.length?nums[idx]:0;
+}
 function findTotal(lines){
-  const keys=[/ご?請求(予定)?金額|ご請求額|今回請求/,/お?支払(い)?(金額|額|合計)|お支払い/,/税込(合計|計)/,/合計/,/お?買上(げ)?(計|合計|金額)?|お買い上げ/,/総額|領収金額/,/^計\b|^計\s*¥/];
+  const keys=[/ご?請求(予定)?金額|ご請求額|今回請求/,/お?支払(い)?(金額|額|合計)|お支払い/,/税込(合計|計)/,/合計/,/お?買上(げ)?(計|合計|金額)?|お買い上げ/,/総額|領収金額/,/^計$|^計\s*¥/];
   for(const k of keys){
     for(let i=0;i<lines.length;i++){
       const L=lines[i];
       if(!k.test(L)||SKIP_TOTAL.test(L))continue;
       let ns=numsIn(L.replace(k,' '));
-      if(!ns.length&&lines[i+1])ns=numsIn(lines[i+1]);
-      const v=ns.length?ns[ns.length-1]:0;
+      let v=ns.length?ns[ns.length-1]:0;
+      if(!v&&lines[i+1]&&isNumLine(lines[i+1]))v=numsIn(lines[i+1])[0]||0;
+      if(!v)v=alignedValue(lines,i);
       if(v>0&&v<10000000)return v;
     }
   }
-  // fallback: largest plausible amount with a yen mark
+  // fallback: largest yen amount, leaving out cash handed over and change
+  const skip=new Set();
+  lines.forEach((L,i)=>{if(/預|釣/.test(L)){const n=numsIn(L);skip.add(n.length?n[n.length-1]:alignedValue(lines,i))}});
   let best=0;
-  for(const L of lines){if(SKIP_TOTAL.test(L)||/TEL|電話|No\.|番号|登録/.test(L))continue;if(!/¥|円/.test(L))continue;for(const v of numsIn(L))if(v<10000000&&v>best)best=v}
+  for(const L of lines){if(SKIP_TOTAL.test(L)||/TEL|電話|No\.|番号|登録/.test(L))continue;if(!/¥|円/.test(L))continue;for(const v of numsIn(L))if(v<10000000&&v>best&&!skip.has(v))best=v}
   return best||null;
 }
 function findDate(t){
@@ -532,7 +556,7 @@ function findPayment(text){
 function findCard(text){for(const [n,re] of CARDS)if(re.test(text))return n;return ''}
 function findItems(lines){
   const out=[];
-  const stop=/合計|小計|預|釣|消費税|税率|対象|ポイント|お買上|支払|請求|振替|TEL|電話|登録番号|点数|\d{1,4}\s*[年\/]\s*\d{1,2}|\d{1,2}:\d{2}/;
+  const stop=/合計|小計|預|釣|消費税|税率|対象|ポイント|お買上|支払|請求|振替|TEL|電話|登録番号|点数|現金|クレジット|カード|PayPay|楽天ペイ|d払い|au.?PAY|Suica|PASMO|iD|QUICPay|nanaco|WAON|Edy|電子マネー|\d{1,4}\s*[年\/]\s*\d{1,2}|\d{1,2}:\d{2}/;
   for(const L of lines){
     if(stop.test(L))continue;
     const m=L.match(/^(.*?[぀-ヿ一-鿿A-Za-z].*?)\s*¥?\s*(\d{1,3}(?:,\d{3})+|\d{2,6})\s*(?:円)?\s*[※*軽外内税]*\s*$/);
@@ -557,38 +581,11 @@ function parseReceipt(raw){
   };
 }
 
-/* ===== OCR (runs on this device) ===== */
-let worker=null,progHandler=null;
-async function getWorker(){
-  if(worker)return worker;
-  if(!window.Tesseract)throw new Error('noengine');
-  worker=await Tesseract.createWorker('jpn',1,{logger:m=>progHandler&&progHandler(m)});
-  await worker.setParameters({tessedit_pageseg_mode:'4',preserve_interword_spaces:'0'});
-  return worker;
-}
-async function prepImage(file){
-  const url=URL.createObjectURL(file);
-  try{
-    const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=url});
-    const target=1500,w=img.naturalWidth,hh=img.naturalHeight;
-    const s=Math.min(2,target/Math.min(w,hh)>1?target/Math.min(w,hh):Math.min(1,2200/Math.max(w,hh)));
-    const c=document.createElement('canvas');c.width=Math.round(w*s);c.height=Math.round(hh*s);
-    const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(img,0,0,c.width,c.height);
-    // grayscale + contrast stretch for thermal paper
-    const d=g.getImageData(0,0,c.width,c.height),p=d.data;let lo=255,hi=0;
-    for(let i=0;i<p.length;i+=16){const v=.299*p[i]+.587*p[i+1]+.114*p[i+2];if(v<lo)lo=v;if(v>hi)hi=v}
-    const span=Math.max(40,hi-lo);
-    for(let i=0;i<p.length;i+=4){let v=(.299*p[i]+.587*p[i+1]+.114*p[i+2]-lo)*255/span;v=v<0?0:v>255?255:v;p[i]=p[i+1]=p[i+2]=v}
-    g.putImageData(d,0,0);
-    return c;
-  }finally{URL.revokeObjectURL(url)}
-}
-
 /* ===== entry sheet ===== */
-let editingId=null,autoCat=null,scanToken=0,draftItems=[],draftSource='manual';
+let editingId=null,autoCat=null,draftItems=[],draftSource='manual',touched=new Set(),parseTimer=null;
 const fCat=$('fCat');for(const c of CATS)fCat.append(h('option',{value:c.n,text:c.n}));
 const fPay=$('fPay');let payVal='cash';
-for(const [id,label] of PAYS)fPay.append(h('button',{type:'button','data-v':id,'aria-pressed':'false',onclick:()=>setPay(id)},label));
+for(const [id,label] of PAYS)fPay.append(h('button',{type:'button','data-v':id,'aria-pressed':'false',onclick:()=>{touched.add('pay');setPay(id)}},label));
 function setPay(v){payVal=PAY_L[v]?v:'cash';for(const b of fPay.children)b.setAttribute('aria-pressed',String(b.dataset.v===payVal));$('cardField').hidden=payVal!=='credit'}
 fCat.onchange=updateLearnHint;
 $('fStore').addEventListener('input',()=>{const s=$('fStore').value.trim();if(!editingId&&state.storeCat[s])fCat.value=state.storeCat[s];updateLearnHint()});
@@ -611,60 +608,54 @@ function fillForm(d){
   $('itemsSum').textContent=`読み取った品目（${draftItems.length}件）`;
   updateLearnHint();
 }
-function openSheet({entry,file}={}){
-  editingId=entry?entry.id:null;autoCat=null;draftSource=entry?entry.source||'manual':(file?'scan':'manual');
-  $('sheetTitle').textContent=entry?'記録を編集':(file?'読み取り結果を確認':'手入力で登録');
+function openSheet({entry,scan}={}){
+  editingId=entry?entry.id:null;autoCat=null;touched=new Set();clearTimeout(parseTimer);
+  draftSource=entry?entry.source||'manual':(scan?'scan':'manual');
+  $('sheetTitle').textContent=entry?'記録を編集':(scan?'レシートを読み取る':'手入力で登録');
   $('delBtn').hidden=!entry;disarmDel();
   $('saveBtn').textContent=entry?'保存する':'登録する';
   const cl=$('cardList');cl.textContent='';
   for(const c of [...new Set(state.entries.map(e=>(e.card||'').trim()).filter(Boolean))])cl.append(h('option',{value:c}));
-  $('thumbwrap').hidden=!file;$('rawBox').hidden=true;
+  $('scanBox').hidden=!scan;$('fText').value='';setStatus('');
   fillForm(entry||{date:todayISO()});
   $('scrim').hidden=false;document.body.style.overflow='hidden';
-  if(file)scan(file);else if(!entry)setTimeout(()=>$('fAmount').focus(),50);
+  $('scrim').querySelector('.sheet').scrollTop=0;
+  if(!entry&&!scan)setTimeout(()=>$('fAmount').focus(),50);
 }
-function closeSheet(){scanToken++;$('scrim').hidden=true;document.body.style.overflow='';const t=$('thumb');if(t.src.startsWith('blob:'))URL.revokeObjectURL(t.src);t.removeAttribute('src')}
+function closeSheet(){clearTimeout(parseTimer);$('scrim').hidden=true;document.body.style.overflow=''}
 $('closeBtn').onclick=closeSheet;
 $('scrim').addEventListener('click',e=>{if(e.target===$('scrim'))closeSheet()});
-function setStatus(text,{err=false,prog=null}={}){
-  $('status').textContent=text;$('statusBox').className='status'+(err?' err':'');
-  $('prog').hidden=prog==null;if(prog!=null)$('progFill').style.width=Math.round(prog*100)+'%';
-}
-async function scan(file){
-  const token=++scanToken;
-  $('thumb').src=URL.createObjectURL(file);
-  $('saveBtn').disabled=true;
-  setStatus('準備中…',{prog:0});
-  progHandler=m=>{
-    if(token!==scanToken)return;
-    if(m.status==='recognizing text')setStatus('文字を読み取り中…',{prog:m.progress});
-    else if(/load|initializ/.test(m.status||''))setStatus(worker?'準備中…':'読み取り用データを準備中…（初回のみ数十秒かかります）',{prog:m.progress||0});
-  };
-  try{
-    const canvas=await prepImage(file);
-    const w=await getWorker();
-    const {data}=await w.recognize(canvas);
-    if(token!==scanToken)return;
-    const r=parseReceipt(data.text||'');
-    autoCat=r.category;
-    fillForm(r);
-    $('raw').textContent=r.text;$('rawBox').hidden=!r.text.trim();
-    if(!r.amount)setStatus('金額を読み取れませんでした。金額を入力してください。',{err:true});
-    else setStatus('読み取りました。内容を確認して「登録する」を押してください。');
-  }catch(e){
-    if(token!==scanToken)return;
-    if(e&&e.message==='noengine'||!navigator.onLine)setStatus('読み取り機能を読み込めませんでした。通信できる場所でもう一度お試しください。手入力もできます。',{err:true});
-    else setStatus('うまく読み取れませんでした。明るい場所でレシート全体を撮り直すか、手入力してください。',{err:true});
-    worker=null;
-  }finally{
-    if(token===scanToken)$('saveBtn').disabled=false;
-  }
-}
+function setStatus(text,{err=false}={}){$('status').textContent=text;$('statusBox').className='status'+(err?' err':'');$('statusBox').hidden=!text}
 
-$('shootBtn').onclick=()=>$('camInput').click();
-$('pickBtn').onclick=()=>$('libInput').click();
+/* fields the person changed by hand are kept when the text is read again */
+for(const id of ['fAmount','fDate','fCat','fStore','fCard','fMemo'])$(id).addEventListener('input',()=>touched.add(id));
+fCat.addEventListener('change',()=>touched.add('fCat'));
+function applyParsed(r){
+  const cur={amount:$('fAmount').value,date:$('fDate').value,category:fCat.value,store:$('fStore').value,payment:payVal,card:$('fCard').value,memo:$('fMemo').value};
+  fillForm({
+    amount:touched.has('fAmount')?cur.amount:r.amount,
+    date:touched.has('fDate')?cur.date:r.date,
+    category:touched.has('fCat')?cur.category:r.category,
+    store:touched.has('fStore')?cur.store:r.store,
+    payment:touched.has('pay')?cur.payment:r.payment,
+    card:touched.has('fCard')?cur.card:r.card,
+    memo:cur.memo,items:r.items
+  });
+}
+function readText(){
+  const raw=$('fText').value;
+  if(!raw.trim()){setStatus('');return}
+  const r=parseReceipt(raw);
+  autoCat=r.category;
+  applyParsed(r);
+  if(!r.amount)setStatus('合計金額が見つかりませんでした。「合計」の行が入るようにスキャンし直すか、金額を入力してください。',{err:true});
+  else setStatus('読み取りました。金額・店名を確認して「登録する」を押してください。');
+}
+$('fText').addEventListener('input',()=>{clearTimeout(parseTimer);parseTimer=setTimeout(readText,400)});
+$('fText').addEventListener('paste',()=>{clearTimeout(parseTimer);parseTimer=setTimeout(readText,100)});
+
+$('shootBtn').onclick=()=>openSheet({scan:true});
 $('manualBtn').onclick=()=>openSheet();
-for(const id of ['camInput','libInput'])$(id).addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];e.target.value='';if(f)openSheet({file:f})});
 
 $('saveBtn').onclick=()=>{
   const amount=Math.round(+$('fAmount').value);
